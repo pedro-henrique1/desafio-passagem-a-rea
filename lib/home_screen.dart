@@ -1,3 +1,4 @@
+import 'package:desafio_tecnico/data/fetch_data.dart';
 import 'package:desafio_tecnico/widgets/CountDown.dart';
 import 'package:desafio_tecnico/widgets/button_type.dart';
 import 'package:flutter/cupertino.dart';
@@ -17,6 +18,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController originController = TextEditingController();
   final TextEditingController destinationController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  List<String> originSuggestions = [];
+  List<String> destinationSuggestions = [];
 
   void _onSingleDateSelected(DateTime date) {
     setState(() {
@@ -30,22 +33,59 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  bool _isLoading = false;
+
+  void _onOriginChanged(String query) {
+    print("Buscando sugestões para: $query");
+
+    if (query.isNotEmpty) {
+      setState(() {
+        _isLoading = true; // Inicia o carregamento
+      });
+
+      fetchSuggestions(query)
+          .then((suggestions) {
+            setState(() {
+              originSuggestions = suggestions;
+              _isLoading = false; // Finaliza o carregamento
+            });
+          })
+          .catchError((error) {
+            print("Erro ao buscar sugestões: $error");
+            setState(() {
+              _isLoading = false;
+              originSuggestions = [];
+            });
+          });
+    } else {
+      setState(() {
+        originSuggestions = [];
+      });
+    }
+  }
+
+  void _onDestinationChanged(String query) {
+    if (query.isNotEmpty) {
+      fetchSuggestions(query).then((suggestions) {
+        setState(() {
+          destinationSuggestions = suggestions;
+        });
+      });
+    } else {
+      setState(() {
+        destinationSuggestions = [];
+      });
+    }
+  }
+
   void _submitForm() {
     if (_formKey.currentState?.validate() ?? false) {
-      // Processar os dados do formulário
       String origin = originController.text;
       String destination = destinationController.text;
-
-      // Aqui você pode adicionar a lógica de envio dos dados
-      print('Origem: $origin');
-      print('Destino: $destination');
-      print('Data Selecionada: ${selectedDateRange != null ? "${selectedDateRange!.start} a ${selectedDateRange!.end}" : "Não selecionada"}');
-
-      // Limpar os campos após o envio, se necessário
       originController.clear();
       destinationController.clear();
       setState(() {
-        selectedDateRange = null; // Resetar a seleção de datas
+        selectedDateRange = null;
       });
     }
   }
@@ -89,10 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(height: 30),
             _buildDropdownRow(),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _submitForm,
-              child: Text('Enviar'),
-            ),
+            ElevatedButton(onPressed: _submitForm, child: Text('Enviar')),
           ],
         ),
       ),
@@ -110,11 +147,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
+        Flexible(
           child: _buildTextField(
             controller: originController,
             icon: CupertinoIcons.search,
             hint: "Local de origem",
+            onChanged: _onOriginChanged,
+            suggestions: originSuggestions,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Campo obrigatório';
@@ -128,6 +167,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _buildTextField(
             controller: destinationController,
             icon: CupertinoIcons.location,
+            onChanged: _onDestinationChanged,
+            suggestions: destinationSuggestions,
             hint: "Destino",
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -138,50 +179,88 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         SizedBox(width: 20),
-        Expanded(child: _buildDateDisplay()),
+        // Expanded(child: _buildDateDisplay()),
       ],
     );
   }
+
 
   Widget _buildTextField({
     required TextEditingController controller,
     required IconData icon,
     required String hint,
     String? Function(String?)? validator,
+    required ValueChanged<String> onChanged,
+    required List<String> suggestions,
   }) {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          children: [
-            Icon(icon),
-            SizedBox(width: 5),
-            Expanded(
-              child: TextFormField(
-                controller: controller,
-                decoration: InputDecoration(
-                  hintText: hint,
-                  border: InputBorder.none,
-                ),
-                validator: validator,
+    return Column(
+      children: [
+        Container(
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.5),
+                spreadRadius: 2,
+                blurRadius: 10,
+                offset: Offset(0, 3),
               ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                Icon(icon),
+                SizedBox(width: 5),
+                Expanded(
+                  child: TextFormField(
+                    controller: controller,
+                    onChanged: onChanged,
+                    decoration: InputDecoration(
+                      hintText: hint,
+                      border: InputBorder.none,
+                    ),
+                    validator: validator,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        if (suggestions.isNotEmpty)
+          Container(
+            height: 150, // Define um tamanho fixo para rolagem
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.5),
+                  spreadRadius: 2,
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: ListView.builder(
+              itemCount: suggestions.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(suggestions[index]),
+                  onTap: () {
+                    controller.text = suggestions[index];
+                    setState(() {
+                      suggestions.clear(); // Fecha a lista após selecionar
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 
@@ -229,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(
                 selectedDateRange != null
                     ? "${selectedDateRange!.start.day}/${selectedDateRange!.start.month}/${selectedDateRange!.start.year} - "
-                    "${selectedDateRange!.end.day}/${selectedDateRange!.end.month}/${selectedDateRange!.end.year}"
+                        "${selectedDateRange!.end.day}/${selectedDateRange!.end.month}/${selectedDateRange!.end.year}"
                     : "Ida e Volta ou apenas Ida",
                 style: TextStyle(fontSize: 16, color: Colors.black54),
                 overflow: TextOverflow.ellipsis,
