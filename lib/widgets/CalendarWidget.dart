@@ -6,10 +6,10 @@ class CalendarWidget extends StatefulWidget {
   final Function(DateTime) onSingleDateSelected;
 
   const CalendarWidget({
-    Key? key,
+    super.key,
     required this.onDateRangeSelected,
     required this.onSingleDateSelected,
-  }) : super(key: key);
+  });
 
   @override
   _CalendarWidgetState createState() => _CalendarWidgetState();
@@ -21,24 +21,29 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   DateTime _focusedDay = DateTime.now();
 
   void _onDaySelected(DateTime day, DateTime focusedDay) {
-    setState(() {
-      _focusedDay = focusedDay;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _focusedDay = focusedDay;
 
-      if (_selectedDateRange == null) {
-        // Se nenhuma data foi selecionada, armazena a primeira data
-        _selectedDateRange = DateTimeRange(start: day, end: day);
-        _selectedDay = day;
-        widget.onSingleDateSelected(day);
-      } else if (_selectedDateRange!.start == _selectedDateRange!.end) {
-        // Se já há uma data única selecionada, troca para um intervalo
-        _selectedDateRange = DateTimeRange(start: _selectedDateRange!.start, end: day);
-        widget.onDateRangeSelected(_selectedDateRange!);
-      } else {
-        // Se um intervalo já foi selecionado, redefine para uma nova data única
-        _selectedDateRange = DateTimeRange(start: day, end: day);
-        _selectedDay = day;
-        widget.onSingleDateSelected(day);
-      }
+        if (_selectedDateRange == null) {
+          // Se nenhuma data foi selecionada, armazena a primeira data
+          _selectedDateRange = DateTimeRange(start: day, end: day);
+          _selectedDay = day;
+          widget.onSingleDateSelected(day);
+        } else if (_selectedDateRange!.start == _selectedDateRange!.end) {
+          // Se já há uma data única selecionada, troca para um intervalo
+          _selectedDateRange = DateTimeRange(
+            start: _selectedDateRange!.start,
+            end: day,
+          );
+          widget.onDateRangeSelected(_selectedDateRange!);
+        } else {
+          // Se um intervalo já foi selecionado, redefine para uma nova data única
+          _selectedDateRange = DateTimeRange(start: day, end: day);
+          _selectedDay = day;
+          widget.onSingleDateSelected(day);
+        }
+      });
     });
   }
 
@@ -48,7 +53,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       children: [
         TableCalendar<DateTime>(
           focusedDay: _focusedDay,
-          firstDay: DateTime(2000),
+          firstDay: DateTime.now(),
           lastDay: DateTime(2111),
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDateRange?.start, day) ||
@@ -78,4 +83,3 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 }
-
