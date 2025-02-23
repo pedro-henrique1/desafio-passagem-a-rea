@@ -12,10 +12,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   DateTimeRange? selectedDateRange;
 
-  void _onDateRangeSelected(DateTimeRange range) {
+  void _onSingleDateSelected(DateTime date) {
     setState(() {
-      selectedDateRange = range;
+      selectedDateRange = DateTimeRange(start: date, end: date); // Armazena a data única como um intervalo
     });
+    print("Data única selecionada: ${date.toLocal()}");
+  }
+
+  void _onDateRangeSelected(DateTimeRange dateRange) {
+    setState(() {
+      selectedDateRange = dateRange;
+    });
+    print("Intervalo de datas selecionado: ${dateRange.start.toLocal()} - ${dateRange.end.toLocal()}");
   }
 
   @override
@@ -79,9 +87,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCalendarWidget(context) {
     return SizedBox(
-      child: CalendarWidget(onDateRangeSelected: _onDateRangeSelected),
+      child: CalendarWidget(onDateRangeSelected: _onDateRangeSelected,
+        onSingleDateSelected: _onSingleDateSelected),
     );
   }
+
   void _showCalendarModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
