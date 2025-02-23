@@ -3,8 +3,13 @@ import 'package:table_calendar/table_calendar.dart';
 
 class CalendarWidget extends StatefulWidget {
   final Function(DateTimeRange) onDateRangeSelected;
+  final Function(DateTime) onSingleDateSelected;
 
-  const CalendarWidget({super.key, required this.onDateRangeSelected});
+  const CalendarWidget({
+    super.key,
+    required this.onDateRangeSelected,
+    required this.onSingleDateSelected,
+  });
 
   @override
   _CalendarWidgetState createState() => _CalendarWidgetState();
@@ -12,51 +17,43 @@ class CalendarWidget extends StatefulWidget {
 
 class _CalendarWidgetState extends State<CalendarWidget> {
   DateTimeRange? _selectedDateRange;
+  DateTime? _selectedDay;
   DateTime _focusedDay = DateTime.now();
-  DateTime _selectedDay = DateTime.now();
 
   void _onDaySelected(DateTime day, DateTime focusedDay) {
-    setState(() {
-      _selectedDay = day;
-      _focusedDay = focusedDay;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _focusedDay = focusedDay;
+
+        if (_selectedDateRange == null) {
+          // Se nenhuma data foi selecionada, armazena a primeira data
+          _selectedDateRange = DateTimeRange(start: day, end: day);
+          _selectedDay = day;
+          widget.onSingleDateSelected(day);
+        } else if (_selectedDateRange!.start == _selectedDateRange!.end) {
+          // Se já há uma data única selecionada, troca para um intervalo
+          _selectedDateRange = DateTimeRange(
+            start: _selectedDateRange!.start,
+            end: day,
+          );
+          widget.onDateRangeSelected(_selectedDateRange!);
+        } else {
+          // Se um intervalo já foi selecionado, redefine para uma nova data única
+          _selectedDateRange = DateTimeRange(start: day, end: day);
+          _selectedDay = day;
+          widget.onSingleDateSelected(day);
+        }
+      });
     });
-
-    if (_selectedDateRange == null) {
-      _selectedDateRange = DateTimeRange(start: day, end: day);
-    } else if (_selectedDateRange!.start == _selectedDateRange!.end) {
-      if (day.isBefore(_selectedDateRange!.start)) {
-        _selectedDateRange = DateTimeRange(start: day, end: _selectedDateRange!.start);
-      } else {
-        _selectedDateRange = DateTimeRange(start: _selectedDateRange!.start, end: day);
-      }
-    } else {
-      _selectedDateRange = DateTimeRange(start: day, end: day);
-    }
-
-    if (_selectedDateRange!.start.isBefore(_selectedDateRange!.end)) {
-      widget.onDateRangeSelected(_selectedDateRange!);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Container(
-        height: 400,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 5,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: TableCalendar(
+    return Column(
+      children: [
+        TableCalendar<DateTime>(
           focusedDay: _focusedDay,
-          firstDay: DateTime(2000),
+          firstDay: DateTime.now(),
           lastDay: DateTime(2111),
           selectedDayPredicate: (day) {
             return isSameDay(_selectedDateRange?.start, day) ||
@@ -70,19 +67,19 @@ class _CalendarWidgetState extends State<CalendarWidget> {
               color: Colors.blue,
               shape: BoxShape.circle,
             ),
-            rangeHighlightColor: Colors.lightBlue,
+            rangeHighlightColor: Colors.blueGrey,
             rangeStartDecoration: BoxDecoration(
-              color: Colors.indigo,
+              color: Colors.blue,
               shape: BoxShape.circle,
             ),
             rangeEndDecoration: BoxDecoration(
-              color: Colors.indigo,
+              color: Colors.blue,
               shape: BoxShape.circle,
             ),
           ),
           rangeSelectionMode: RangeSelectionMode.toggledOn,
         ),
-      ),
+      ],
     );
   }
 }
