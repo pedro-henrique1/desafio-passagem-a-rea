@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class RadioTypeTicket extends StatefulWidget {
-  const RadioTypeTicket({super.key});
+  final ValueChanged<SingingCharacter> onChanged;
+  const RadioTypeTicket({Key ? key, required this.onChanged}) : super(key: key);
 
   @override
   State<RadioTypeTicket> createState() => _RadioTypeTicketState();
@@ -33,6 +34,7 @@ class _RadioTypeTicketState extends State<RadioTypeTicket> {
         setState(() {
           _character = value;
         });
+        widget.onChanged(value);
       },
       borderRadius: BorderRadius.circular(8),
       child: Padding(

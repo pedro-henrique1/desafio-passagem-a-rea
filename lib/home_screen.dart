@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:desafio_tecnico/data/fetch_data.dart';
 import 'package:desafio_tecnico/widgets/CountDown.dart';
 import 'package:desafio_tecnico/widgets/button_type.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'widgets/CalendarWidget.dart';
 import 'widgets/Dropdown.dart';
 
@@ -15,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   DateTimeRange? selectedDateRange;
+  SingingCharacter selectedTicketType = SingingCharacter.Ida;
   final TextEditingController originController = TextEditingController();
   final TextEditingController destinationController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -78,17 +82,42 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _submitForm() {
+  void _submitForm() async {
     if (_formKey.currentState?.validate() ?? false) {
       String origin = originController.text;
       String destination = destinationController.text;
-      originController.clear();
-      destinationController.clear();
-      setState(() {
-        selectedDateRange = null;
-      });
+      String dateIda = DateFormat('dd/MM/yyyy').format(selectedDateRange?.start ?? DateTime.now());
+      String dateVolta = DateFormat('dd/MM/yyyy').format(selectedDateRange?.end ?? DateTime.now());
+      String selectedTicketType = this.selectedTicketType.name;
+
+      final List<String> selectedAirlines = [
+        "AMERICAN AIRLINES",
+        "GOL",
+        "IBERIA",
+        "INTERLINE",
+        "LATAM",
+        "AZUL",
+        "TAP",
+      ];
+
+      // Criação do mapa de dados no formato desejado
+      final Map<String, dynamic> data = {
+        'Companhias': selectedAirlines,
+        'DataIda': dateIda,
+        'DataVolta': dateVolta,
+        'Origem': origin,
+        'Destino': destination,
+        'Tipo': selectedTicketType,
+      };
+
+
+      final jsonData = jsonEncode(data);
+
+      // Chamando a função para buscar preços
+      await createPassagem(jsonData);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +168,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDropdownRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [DropdownWidget(), RadioTypeTicket(), CountPeople()],
+      children: [
+        DropdownWidget(),
+        RadioTypeTicket(
+          onChanged: (SingingCharacter value) {
+            setState(() {
+              selectedTicketType = value;
+            });
+          },
+        ),
+        CountPeople(),
+      ],
     );
   }
 
@@ -179,11 +218,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         SizedBox(width: 20),
-        // Expanded(child: _buildDateDisplay()),
+        Expanded(child: _buildDateDisplay()),
       ],
     );
   }
-
 
   Widget _buildTextField({
     required TextEditingController controller,
