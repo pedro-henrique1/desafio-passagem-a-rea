@@ -113,8 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final jsonData = jsonEncode(data);
 
-      // Chamando a função para buscar preços
-      await createPassagem(jsonData);
+      await createPassagem(jsonData, context );
     }
   }
 

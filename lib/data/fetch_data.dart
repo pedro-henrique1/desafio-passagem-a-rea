@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import '../result_screen.dart';
 
 Future<List<String>> fetchSuggestions(String query) async {
   final url = Uri.parse("http://localhost:8080/proxy/aeroportos?q=$query");
@@ -19,38 +22,57 @@ Future<List<String>> fetchSuggestions(String query) async {
     return [];
   }
 }
-
-Future<void> createPassagem(String jsonData) async {
+Future<void> createPassagem(String jsonData, BuildContext context) async {
   try {
     final response = await http.post(
       Uri.parse('http://localhost:8080/proxy/pass'),
       headers: {'Content-Type': 'application/json'},
       body: jsonData,
     );
+
     if (response.statusCode == 201) {
       final responseData = jsonDecode(response.body.toString());
       String buscaId = responseData['Busca'];
-      buscarPassagens(buscaId);
+      _buscarVoos(buscaId, context);
     }
   } catch (e) {
     print('Erro na requisição: $e');
   }
 }
 
-Future<void> buscarPassagens(String idBusca) async {
-  try {
-    final response = await http.get(
-      Uri.parse('http://localhost:8080/proxy/busca/$idBusca'),
-      headers: {'Content-Type': 'application/json'},
+void _buscarVoos(String buscaId, BuildContext context) async {
+  final flightData = await buscarVoos(buscaId);
+
+  if (flightData != null) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultScreen(flightData: flightData)
+      ),
     );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Erro ao buscar voos!")),
+    );
+  }
+}
+
+// Função para buscar os dados dos voos
+Future<Map<String, dynamic>?> buscarVoos(String buscaId) async {
+  final url = Uri.parse("http://localhost:8080/proxy/busca/$buscaId");
+
+  try {
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      print('Passagens obtidas: $responseData');
+      return json.decode(response.body);
     } else {
-      print('Erro ao buscar passagens: ${response.statusCode}');
+      print("Erro ao buscar voos: ${response.statusCode}");
+      return null;
     }
   } catch (e) {
-    print('Erro na requisição: $e');
+    print("Erro na requisição: $e");
+    return null;
   }
 }
+
